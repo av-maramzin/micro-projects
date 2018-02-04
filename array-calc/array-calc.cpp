@@ -1,17 +1,12 @@
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
+#include <climits>
+#include <cstdint>
 
 #include <chrono>
 #include <iostream>
 using namespace std;
-
-auto conduct_experiment(void(*func)(void)) {
-    auto start_time = chrono::high_resolution_clock::now();
-    func();
-    auto end_time = chrono::high_resolution_clock::now();
-    return (end_time - start_time);
-}
 
 // experiments parameters
 const unsigned int size = 100000;
@@ -21,13 +16,72 @@ inline int random(int range) {
     return rand() % range;
 }
 
-// arrays to conduct experiments on
-static int a[size];
-static int b[size];
-static int c[size];
+template <typename T>
+class Function 
+{
+    public:
+        Function() {}
+        virtual T operator()() const = 0;
+};
 
-void array_min();
-void array_sum();
+template <typename T>
+class Array_Sum : public Function<T>
+{
+    public:
+        Array_Sum(T* array, uint64_t size)
+            : array(array), array_size(size) {}
+
+        T operator()() const
+        {
+            T sum = 0;
+            for (uint64_t i = 0; i < array_size; i++) 
+            {
+                sum += array[i];                
+            }
+            return sum;
+        }
+
+    private:
+        T* array;
+        uint64_t array_size;
+};
+
+template <typename T>
+class Array_Min : public Function<T>
+{
+    public:
+        Array_Min(T* array, uint64_t size)
+            : array(array), array_size(size) {}
+
+        T operator()() const
+        {
+            T min = array[0];
+            for (uint64_t i = 1; i < array_size; i++) 
+            {
+                if (array[i] < min) 
+                {
+                    min = array[i];
+                }
+            }
+            return min;
+        }
+
+    private:
+        T* array;
+        uint64_t array_size;
+};
+
+template <typename T>
+auto conduct_experiment(Function<T>& func) {
+    auto start_time = chrono::high_resolution_clock::now();
+    func();
+    auto end_time = chrono::high_resolution_clock::now();
+    return (end_time - start_time);
+}
+
+// arrays to conduct experiments on
+static uint64_t a[size];
+static uint64_t b[size];
 
 int main() {
 
@@ -37,64 +91,22 @@ int main() {
     for (unsigned int i = 0; i < size; i++) {
         a[i] = random(range);     
         b[i] = random(range);     
-        c[i] = random(range);     
     }
+
+    Array_Sum<uint64_t> a_sum{a, size};
+    Array_Sum<uint64_t> b_sum{b, size};
+
+    Array_Min<uint64_t> a_min{a, size};
+    Array_Min<uint64_t> b_min{b, size};
 
     // run experiments
     cout << "array sum: ";
-    cout << (double)chrono::duration_cast<chrono::microseconds>( conduct_experiment(array_sum) ).count()/1000000 << " seconds.\n";
+    cout << "a: " << (double)chrono::duration_cast<chrono::microseconds>( conduct_experiment(a_sum) ).count()/1000000 << " seconds.\n";
+    cout << "b: " << (double)chrono::duration_cast<chrono::microseconds>( conduct_experiment(b_sum) ).count()/1000000 << " seconds.\n";
 
     cout << "array min: ";
-    cout << (double)chrono::duration_cast<chrono::microseconds>( conduct_experiment(array_min) ).count()/1000000 << " seconds.\n";
+    cout << "a: " << (double)chrono::duration_cast<chrono::microseconds>( conduct_experiment(a_min) ).count()/1000000 << " seconds.\n";
+    cout << "b: " << (double)chrono::duration_cast<chrono::microseconds>( conduct_experiment(b_min) ).count()/1000000 << " seconds.\n";
 
     return 0;
-}
-
-void array_sum() {
-    int sum1 = 0;
-    int sum2 = 0;
-    int sum3 = 0;
-    int sum = 0;
-
-    for (unsigned int i = 0; i < size; i++) {
-        sum1 += a[i];     
-    }
-
-    for (unsigned int i = 0; i < size; i++) {
-        sum2 += b[i];     
-    }
-
-    for (unsigned int i = 0; i < size; i++) {
-        sum3 += c[i];     
-    }
-
-    sum = sum1 + sum2 + sum3;
-    cout << "array sum: " << sum << endl;
-}
-
-void array_min() {
-    int min1 = 0;
-    int min2 = 0;
-    int min3 = 0;
-    int min = 0;
-
-    min1 = a[0];
-    for (unsigned int i = 0; i < size; i++) {
-        if (a[i] < min1) min1 = a[i];
-    }
-    
-    min2 = a[0];
-    for (unsigned int i = 0; i < size; i++) {
-        if (a[i] < min2) min2 = a[i];
-    }
-    
-    min3 = a[0];
-    for (unsigned int i = 0; i < size; i++) {
-        if (a[i] < min3) min3 = a[i];
-    }
-
-    min = (min1 < min2) ? min1 : min2;
-    min = (min < min3) ? min : min3;
-    
-    cout << "array min: " << min << endl;
 }
